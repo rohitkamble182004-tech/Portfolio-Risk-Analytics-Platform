@@ -48,8 +48,9 @@ class TestRiskPipeline:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["var"]["var_dollar"] > 0
-        assert data["cvar"]["cvar_dollar"] >= data["var"]["var_dollar"]
+        # Updated to use camelCase keys
+        assert data["var"]["varDollar"] > 0
+        assert data["cvar"]["cvarDollar"] >= data["var"]["varDollar"]
         assert data["var"]["method"] == "historical"
 
     async def test_parametric_var_end_to_end(self, client, sample_prices, risk_payload):
@@ -64,7 +65,7 @@ class TestRiskPipeline:
         assert resp.status_code == 200
         data = resp.json()
         assert data["var"]["method"] == "parametric"
-        assert data["var"]["var_dollar"] > 0
+        assert data["var"]["varDollar"] > 0
 
     async def test_sharpe_ratio_present(self, client, sample_prices, risk_payload):
         with patch(
@@ -74,7 +75,8 @@ class TestRiskPipeline:
            patch("app.services.risk_service.cache_set", AsyncMock()):
             resp = await client.post("/api/v1/risk/metrics", json=risk_payload)
 
-        assert resp.json()["sharpe_ratio"] is not None
+        # Updated to use camelCase
+        assert resp.json()["sharpeRatio"] is not None
 
     async def test_correlation_matrix_shape(self, client, sample_prices, risk_payload):
         with patch(
@@ -85,7 +87,8 @@ class TestRiskPipeline:
             resp = await client.post("/api/v1/risk/metrics", json=risk_payload)
 
         data = resp.json()
-        corr = data["correlation_matrix"]
+        # Updated to use camelCase
+        corr = data["correlationMatrix"]
         n = len(data["tickers"])
         assert len(corr) == n
         assert all(len(row) == n for row in corr)
@@ -106,10 +109,11 @@ class TestSimulationPipeline:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["num_simulations"] == 500
-        assert data["initial_value"] == 100_000
-        assert data["var_dollar"] > 0
-        assert 0 <= data["probability_of_loss"] <= 1
+        # Updated to use camelCase
+        assert data["numSimulations"] == 500
+        assert data["initialValue"] == 100_000
+        assert data["varDollar"] > 0
+        assert 0 <= data["probabilityOfLoss"] <= 1
 
     async def test_percentile_ordering(self, client, sample_prices, sim_payload):
         with patch(
@@ -119,7 +123,8 @@ class TestSimulationPipeline:
            patch("app.services.simulation_service.cache_set", AsyncMock()):
             resp = await client.post("/api/v1/simulation/run", json=sim_payload)
 
-        fv = resp.json()["final_values"]
+        # Updated to use camelCase
+        fv = resp.json()["finalValues"]
         assert fv["p5"] <= fv["p10"] <= fv["p25"] <= fv["p50"] <= fv["p75"] <= fv["p90"] <= fv["p95"]
 
     async def test_paths_sample_returned(self, client, sample_prices, sim_payload):
@@ -130,7 +135,8 @@ class TestSimulationPipeline:
            patch("app.services.simulation_service.cache_set", AsyncMock()):
             resp = await client.post("/api/v1/simulation/run", json=sim_payload)
 
-        paths = resp.json()["paths_sample"]
+        # Updated to use camelCase
+        paths = resp.json()["pathsSample"]
         assert paths is not None
         assert len(paths) <= 50
         assert all(isinstance(p, list) for p in paths)

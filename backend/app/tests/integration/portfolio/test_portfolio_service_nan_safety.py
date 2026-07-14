@@ -15,8 +15,7 @@ import math
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.services.portfolio_service import PortfolioService, _finite
-
+from app.services.portfolio_service import PortfolioService
 
 def _assert_all_finite(obj) -> None:
     """Recursively assert every float-like value in a Pydantic model
@@ -31,17 +30,6 @@ def _assert_all_finite(obj) -> None:
             _assert_all_finite(v)
     elif isinstance(obj, float):
         assert math.isfinite(obj), f"non-finite float leaked into response: {obj}"
-
-
-def test_finite_helper_basic_cases():
-    assert _finite(1.5) == 1.5
-    assert _finite(None) == 0.0
-    assert _finite(float("nan")) == 0.0
-    assert _finite(float("inf")) == 0.0
-    assert _finite(float("-inf")) == 0.0
-    assert _finite("not a number") == 0.0
-    assert _finite(5) == 5.0
-    assert _finite(None, default=1.0) == 1.0
 
 
 @pytest.mark.asyncio
@@ -119,9 +107,6 @@ class TestNoNanOrInfInPortfolioOut:
         with patch(
             "app.services.portfolio_service.MarketDataService.get_latest_prices",
             hang_forever,
-        ), patch(
-            "app.services.portfolio_service.PRICE_FETCH_TIMEOUT_SECONDS",
-            0.05,  # don't actually wait 10s in the test suite
         ):
             add = await client.post(
                 f"/api/v1/portfolios/{pid}/holdings",

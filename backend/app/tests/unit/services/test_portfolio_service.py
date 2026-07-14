@@ -15,8 +15,18 @@ def make_portfolio_in(name: str = "Test", value: float = 100_000) -> PortfolioIn
         name=name,
         value=value,
         holdings=[
-            HoldingIn(ticker="AAPL", weight=0.6),
-            HoldingIn(ticker="MSFT", weight=0.4),
+            HoldingIn(
+                ticker="AAPL",
+                quantity=100,
+                avg_cost=150.0,
+                asset_class="equity",
+            ),
+            HoldingIn(
+                ticker="MSFT",
+                quantity=50,
+                avg_cost=300.0,
+                asset_class="equity",
+            ),
         ],
     )
 
@@ -34,30 +44,45 @@ def make_mock_portfolio(portfolio_id: uuid.UUID | None = None):
 
     portfolio.id = portfolio_id or uuid.uuid4()
     portfolio.name = "Test"
-
     portfolio.description = "Test portfolio"
     portfolio.currency = "USD"
     portfolio.benchmark = "SPY"
-
     portfolio.value = 100_000.0
     portfolio.holding_count = 2
-
     portfolio.created_at = MagicMock()
     portfolio.updated_at = MagicMock()
 
+    # Add required PortfolioOut fields
+    portfolio.market_value = 37500.0
+    portfolio.pnl = 7500.0
+    portfolio.return_pct = 25.0
+
     holding_a = MagicMock()
+    holding_a.id = uuid.uuid4()
     holding_a.ticker = "AAPL"
-    holding_a.weight = 0.6
     holding_a.quantity = 100
+    holding_a.avg_cost = 150.0
+    holding_a.asset_class = "equity"
+    holding_a.current_price = 175.0
+    holding_a.market_value = 17500.0
+    holding_a.weight = 0.6
+    holding_a.gain_loss = 2500.0
+    holding_a.gain_loss_pct = 16.67
 
     holding_b = MagicMock()
+    holding_b.id = uuid.uuid4()
     holding_b.ticker = "MSFT"
-    holding_b.weight = 0.4
     holding_b.quantity = 50
+    holding_b.avg_cost = 300.0
+    holding_b.asset_class = "equity"
+    holding_b.current_price = 400.0
+    holding_b.market_value = 20000.0
+    holding_b.weight = 0.4
+    holding_b.gain_loss = 5000.0
+    holding_b.gain_loss_pct = 33.33
     
     portfolio.holdings = [holding_a, holding_b]
     return portfolio
-
 
 @pytest.fixture
 def mock_repo():
