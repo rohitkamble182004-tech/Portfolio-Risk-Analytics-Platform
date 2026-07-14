@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # ───────────────── BASE ─────────────────
 FROM python:3.12-slim AS base
 
@@ -11,35 +9,33 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc libpq-dev curl \
+    gcc \
+    libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# ───────────────── DEPS (PROD) ─────────────────
+# ───────────────── PRODUCTION DEPENDENCIES ─────────────────
 FROM base AS deps
 
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && pip install -r requirements.txt
-
-# ───────────────── DEPS (DEV / TEST) ─────────────────
-FROM deps AS dev
-
-COPY requirements-dev.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements-dev.txt
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
 
 # ───────────────── TEST IMAGE ─────────────────
-FROM dev AS test
+FROM deps AS test
+
+COPY requirements-dev.txt .
+RUN pip install -r requirements-dev.txt
 
 COPY app/ ./app/
+
 CMD ["pytest", "app/tests", "-v"]
 
-# ───────────────── FINAL (APP) ─────────────────
-# Must remain the LAST stage so `docker build` (no --target) defaults to this one.
+# ───────────────── PRODUCTION IMAGE ─────────────────
 FROM deps AS final
 
-RUN groupadd --gid 1000 appuser \
-    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid appuser --create-home appuser
 
 COPY --chown=appuser:appuser app/ ./app/
 
@@ -47,7 +43,7 @@ USER appuser
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
