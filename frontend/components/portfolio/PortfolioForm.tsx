@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import type { CreatePortfolioPayload, AddHoldingPayload } from "../../types/portfolio";
+import type { CreatePortfolioRequest, AddHoldingRequest } from "../../types/portfolio";
 
 // ─── Create Portfolio Form ────────────────────────────────────────────────────
 
 interface CreatePortfolioFormProps {
-  onSubmit: (payload: CreatePortfolioPayload) => Promise<void>;
+  onSubmit: (payload: CreatePortfolioRequest) => Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
 }
@@ -14,13 +14,13 @@ export const CreatePortfolioForm: React.FC<CreatePortfolioFormProps> = ({
   onCancel,
   isSubmitting,
 }) => {
-  const [values, setValues] = useState<CreatePortfolioPayload>({
+  const [values, setValues] = useState<CreatePortfolioRequest>({
     name: "",
     description: "",
     currency: "USD",
-    benchmarkTicker: "SPY",
+    benchmark: "SPY",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof CreatePortfolioPayload, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof CreatePortfolioRequest, string>>>({});
 
   const validate = () => {
     const e: typeof errors = {};
@@ -35,7 +35,7 @@ export const CreatePortfolioForm: React.FC<CreatePortfolioFormProps> = ({
     await onSubmit(values);
   };
 
-  const set = (field: keyof CreatePortfolioPayload) =>
+  const set = (field: keyof CreatePortfolioRequest) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setValues((v) => ({ ...v, [field]: e.target.value }));
 
@@ -82,8 +82,8 @@ export const CreatePortfolioForm: React.FC<CreatePortfolioFormProps> = ({
             <input
               className="form-input"
               placeholder="e.g. SPY"
-              value={values.benchmarkTicker}
-              onChange={set("benchmarkTicker")}
+              value={values.benchmark}
+              onChange={set("benchmark")}
               disabled={isSubmitting}
               style={{ textTransform: "uppercase" }}
             />
@@ -125,7 +125,7 @@ export const CreatePortfolioForm: React.FC<CreatePortfolioFormProps> = ({
 // ─── Add Holding Form ─────────────────────────────────────────────────────────
 
 interface AddHoldingFormProps {
-  onSubmit: (payload: AddHoldingPayload) => Promise<void>;
+  onSubmit: (payload: AddHoldingRequest) => Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
 }
@@ -135,13 +135,13 @@ export const AddHoldingForm: React.FC<AddHoldingFormProps> = ({
   onCancel,
   isSubmitting,
 }) => {
-  const [values, setValues] = useState<AddHoldingPayload>({
+  const [values, setValues] = useState<AddHoldingRequest>({
     ticker: "",
     quantity: 0,
     avgCost: 0,
     assetClass: "equity",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof AddHoldingPayload, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof AddHoldingRequest, string>>>({});
 
   const validate = () => {
     const e: typeof errors = {};
@@ -159,7 +159,7 @@ export const AddHoldingForm: React.FC<AddHoldingFormProps> = ({
   };
 
   const setField =
-    (field: keyof AddHoldingPayload) =>
+    (field: keyof AddHoldingRequest) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const val = e.target.type === "number" ? parseFloat(e.target.value) || 0 : e.target.value;
       setValues((v) => ({ ...v, [field]: val }));
