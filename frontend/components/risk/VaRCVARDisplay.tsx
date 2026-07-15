@@ -1,45 +1,62 @@
+// frontend/components/risk/VaRCVaRDisplay.tsx
+// Rewritten to match backend API contract (single object, not array)
+
 import React, { useState } from "react";
-import type { RiskMetrics, RiskHorizon, ConfidenceLevel } from "../../types/risk";
+import type { RiskMetrics } from "../../types/risk";
 
 interface Props {
   metrics: RiskMetrics;
   portfolioValue: number;
-  onParamsChange?: (horizon: RiskHorizon, confidence: ConfidenceLevel) => void;
 }
 
-const HORIZONS: { value: RiskHorizon; label: string }[] = [
-  { value: 1,   label: "1D" },
-  { value: 5,   label: "5D" },
-  { value: 21,  label: "1M" },
-  { value: 63,  label: "3M" },
+type Horizon = 1 | 5 | 21 | 63 | 252;
+type Confidence = 0.90 | 0.95 | 0.99;
+
+const HORIZONS: { value: Horizon; label: string }[] = [
+  { value: 1, label: "1D" },
+  { value: 5, label: "5D" },
+  { value: 21, label: "1M" },
+  { value: 63, label: "3M" },
   { value: 252, label: "1Y" },
 ];
 
-const CONFIDENCES: { value: ConfidenceLevel; label: string }[] = [
+const CONFIDENCES: { value: Confidence; label: string }[] = [
   { value: 0.90, label: "90%" },
   { value: 0.95, label: "95%" },
   { value: 0.99, label: "99%" },
 ];
 
-function fmtCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+function fmtCurrency(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", { 
+    style: "currency", 
+    currency: "USD", 
+    maximumFractionDigits: 0,
+    notation: "compact",
+  }).format(n);
 }
 
-export const VaRCVaRDisplay: React.FC<Props> = ({ metrics, portfolioValue, onParamsChange }) => {
-  const [horizon, setHorizon]     = useState<RiskHorizon>(1);
-  const [confidence, setConfidence] = useState<ConfidenceLevel>(0.95);
+function fmtPct(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return `${(n * 100).toFixed(2)}%`;
+}
 
-  const selectHorizon = (h: RiskHorizon) => {
-    setHorizon(h);
-    onParamsChange?.(h, confidence);
-  };
-  const selectConfidence = (c: ConfidenceLevel) => {
-    setConfidence(c);
-    onParamsChange?.(horizon, c);
-  };
+export const VaRCVaRDisplay: React.FC<Props> = ({ metrics, portfolioValue }) => {
+  const [horizon, setHorizon] = useState<Horizon>(1);
+  const [confidence, setConfidence] = useState<Confidence>(0.95);
 
-  const varResult  = metrics.var.find((v)  => v.horizon === horizon && v.confidenceLevel === confidence);
-  const cvarResult = metrics.cvar.find((v) => v.horizon === horizon && v.confidenceLevel === confidence);
+  // Backend returns single objects, not arrays
+  const varResult = metrics?.var;
+  const cvarResult = metrics?.cvar;
+
+  // Scale VaR/CVaR for different horizons (sqrt of time)
+  const horizonScale = Math.sqrt(horizon);
+  const scaledVarDollar = varResult?.varDollar != null ? varResult.varDollar * horizonScale : null;
+  const scaledCvarDollar = cvarResult?.cvarDollar != null ? cvarResult.cvarDollar * horizonScale : null;
+  const scaledVarPct = varResult?.varPct != null ? varResult.varPct * horizonScale : null;
+  const scaledCvarPct = cvarResult?.cvarPct != null ? cvarResult.cvarPct * horizonScale : null;
+
+  const maxLoss = Math.max(scaledVarDollar || 0, scaledCvarDollar || 0);
 
   return (
     <div className="vcd card card--elevated">
@@ -56,7 +73,7 @@ export const VaRCVaRDisplay: React.FC<Props> = ({ metrics, portfolioValue, onPar
               <button
                 key={h.value}
                 className={`vcd__toggle ${horizon === h.value ? "vcd__toggle--active" : ""}`}
-                onClick={() => selectHorizon(h.value)}
+                onClick={() => setHorizon(h.value)}
               >
                 {h.label}
               </button>
@@ -71,7 +88,7 @@ export const VaRCVaRDisplay: React.FC<Props> = ({ metrics, portfolioValue, onPar
               <button
                 key={c.value}
                 className={`vcd__toggle ${confidence === c.value ? "vcd__toggle--active" : ""}`}
-                onClick={() => selectConfidence(c.value)}
+                onClick={() => setConfidence(c.value)}
               >
                 {c.label}
               </button>
@@ -85,23 +102,23 @@ export const VaRCVaRDisplay: React.FC<Props> = ({ metrics, portfolioValue, onPar
         <div className="vcd__metric vcd__metric--var">
           <span className="vcd__metric-label">Value at Risk (VaR)</span>
           <span className="vcd__metric-main">
-            {varResult ? fmtCurrency(varResult.value) : "—"}
+            {scaledVarDollar != null ? fmtCurrency(scaledVarDollar) : "—"}
           </span>
           <span className="vcd__metric-sub">
-            {varResult ? `${varResult.pct.toFixed(2)}% of portfolio` : "Not available"}
+            {scaledVarPct != null ? `${fmtPct(scaledVarPct)} of portfolio` : "Not available"}
           </span>
           <p className="vcd__metric-desc">
-            With {(confidence * 100).toFixed(0)}% confidence, max 1-day loss will not exceed this amount.
+            With {(confidence * 100).toFixed(0)}% confidence, max {horizon}-day loss will not exceed this amount.
           </p>
         </div>
 
         <div className="vcd__metric vcd__metric--cvar">
           <span className="vcd__metric-label">Conditional VaR (CVaR / ES)</span>
           <span className="vcd__metric-main">
-            {cvarResult ? fmtCurrency(cvarResult.value) : "—"}
+            {scaledCvarDollar != null ? fmtCurrency(scaledCvarDollar) : "—"}
           </span>
           <span className="vcd__metric-sub">
-            {cvarResult ? `${cvarResult.pct.toFixed(2)}% of portfolio` : "Not available"}
+            {scaledCvarPct != null ? `${fmtPct(scaledCvarPct)} of portfolio` : "Not available"}
           </span>
           <p className="vcd__metric-desc">
             Expected loss in the worst {(100 - confidence * 100).toFixed(0)}% of scenarios.
@@ -110,56 +127,60 @@ export const VaRCVaRDisplay: React.FC<Props> = ({ metrics, portfolioValue, onPar
       </div>
 
       {/* Visual bar */}
-      {varResult && cvarResult && (
+      {maxLoss > 0 && portfolioValue > 0 && (
         <div className="vcd__bar-wrap">
           <div className="vcd__bar-track">
             <div
               className="vcd__bar-var"
-              style={{ width: `${Math.min((varResult.value / portfolioValue) * 100 * 5, 70)}%` }}
+              style={{ width: `${Math.min((scaledVarDollar || 0) / portfolioValue * 200, 70)}%` }}
             />
             <div
               className="vcd__bar-cvar"
-              style={{ width: `${Math.min((cvarResult.value / portfolioValue) * 100 * 5, 95)}%` }}
+              style={{ width: `${Math.min((scaledCvarDollar || 0) / portfolioValue * 200, 95)}%` }}
             />
           </div>
           <div className="vcd__bar-labels">
             <span>0%</span>
-            <span style={{ color: "var(--accent-cyan)" }}>VaR</span>
-            <span style={{ color: "var(--red)" }}>CVaR</span>
-            <span>{((cvarResult.value / portfolioValue) * 200).toFixed(0)}%+</span>
+            <span style={{ color: "var(--cyan)" }}>VaR</span>
+            <span style={{ color: "var(--red-bright)" }}>CVaR</span>
+            <span>{((Math.max(scaledVarDollar || 0, scaledCvarDollar || 0) / portfolioValue) * 200).toFixed(0)}%+</span>
           </div>
         </div>
       )}
 
       <style>{`
         .vcd__header { margin-bottom: 1rem; }
-        .vcd__title { font-size: 1rem; font-weight: 700; }
+        .vcd__title { font-size: 1rem; font-weight: 700; font-family: var(--font-display); }
         .vcd__controls { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: 1.25rem; }
-        .vcd__toggle-group { display: flex; align-items: center; gap: 0.625rem; }
+        .vcd__toggle-group { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
         .vcd__control-label {
-          font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
-          color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap;
+          font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em;
+          color: var(--text-muted); font-family: var(--font-mono);
         }
         .vcd__toggles { display: flex; gap: 2px; background: var(--bg-base); border-radius: var(--radius-md); padding: 2px; }
         .vcd__toggle {
-          padding: 0.3rem 0.7rem; font-size: 0.78rem; font-family: var(--font-mono);
+          padding: 0.3rem 0.7rem; font-size: 0.72rem; font-family: var(--font-mono);
           border: none; background: transparent; color: var(--text-muted);
           border-radius: calc(var(--radius-md) - 2px); cursor: pointer; transition: all 0.15s;
         }
         .vcd__toggle:hover { color: var(--text-primary); background: var(--bg-elevated); }
-        .vcd__toggle--active { background: var(--bg-overlay); color: var(--accent-cyan); }
+        .vcd__toggle--active { background: var(--bg-overlay); color: var(--cyan); }
         .vcd__results { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; }
         .vcd__metric { background: var(--bg-elevated); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
-        .vcd__metric-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-family: var(--font-mono); }
-        .vcd__metric--var .vcd__metric-main { color: var(--accent-cyan); font-family: var(--font-mono); font-size: 1.6rem; font-weight: 500; }
-        .vcd__metric--cvar .vcd__metric-main { color: var(--red); font-family: var(--font-mono); font-size: 1.6rem; font-weight: 500; }
-        .vcd__metric-sub { font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-secondary); }
-        .vcd__metric-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4; }
+        .vcd__metric-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-family: var(--font-mono); }
+        .vcd__metric--var .vcd__metric-main { color: var(--cyan); font-family: var(--font-mono); font-size: 1.6rem; font-weight: 500; }
+        .vcd__metric--cvar .vcd__metric-main { color: var(--red-bright); font-family: var(--font-mono); font-size: 1.6rem; font-weight: 500; }
+        .vcd__metric-sub { font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-secondary); }
+        .vcd__metric-desc { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4; }
         .vcd__bar-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
         .vcd__bar-track { position: relative; height: 8px; background: var(--bg-base); border-radius: 4px; overflow: hidden; }
-        .vcd__bar-var { position: absolute; left: 0; top: 0; height: 100%; background: var(--accent-cyan); border-radius: 4px; opacity: 0.7; transition: width 0.4s ease; }
-        .vcd__bar-cvar { position: absolute; left: 0; top: 0; height: 100%; background: var(--red); border-radius: 4px; opacity: 0.4; transition: width 0.4s ease; }
-        .vcd__bar-labels { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono); }
+        .vcd__bar-var { position: absolute; left: 0; top: 0; height: 100%; background: var(--cyan); border-radius: 4px; opacity: 0.7; transition: width 0.4s ease; }
+        .vcd__bar-cvar { position: absolute; left: 0; top: 0; height: 100%; background: var(--red-bright); border-radius: 4px; opacity: 0.4; transition: width 0.4s ease; }
+        .vcd__bar-labels { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted); font-family: var(--font-mono); }
+        @media (max-width: 600px) {
+          .vcd__results { grid-template-columns: 1fr; }
+          .vcd__controls { flex-direction: column; gap: 0.75rem; }
+        }
       `}</style>
     </div>
   );

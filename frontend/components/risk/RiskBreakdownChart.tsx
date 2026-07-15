@@ -9,15 +9,15 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import type { RiskBreakdownResponse } from "../../types/risk";
+import type { RiskBreakdown } from "../../types/risk";
 import { colors } from "../../styles/theme";
 
 interface Props {
-  breakdown: RiskBreakdownResponse;
+  breakdown: RiskBreakdown;
   isLoading?: boolean;
 }
 
-type ViewMode = "contribution" | "marginal" | "beta";
+type ViewMode = "contribution" | "marginal" ;
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -50,23 +50,19 @@ export const RiskBreakdownChart: React.FC<Props> = ({ breakdown, isLoading }) =>
   const [view, setView] = React.useState<ViewMode>("contribution");
 
   const data = useMemo(() => {
-    const sorted = [...breakdown.breakdown].sort(
-      (a, b) => b.percentContribution - a.percentContribution
-    );
-    return sorted.map((b) => ({
+  return [...breakdown.breakdown]
+    .sort((a, b) => b.percent_contribution - a.percent_contribution)
+    .map((b) => ({
       ticker: b.ticker,
-      contribution: parseFloat((b.percentContribution * 100).toFixed(2)),
-      marginalVaR: parseFloat(b.marginalVaR.toFixed(4)),
-      beta: parseFloat(b.beta.toFixed(3)),
-      systematicRisk: b.systematicRisk,
-      specificRisk: b.specificRisk,
+      contribution: b.percent_contribution * 100,
+      marginalVaR: b.marginal_var,
+      componentVaR: b.component_var,
     }));
-  }, [breakdown]);
+}, [breakdown]);
 
   const viewConfig: Record<ViewMode, { key: string; label: string; color: string; suffix: string }> = {
     contribution: { key: "contribution", label: "% Contribution to VaR", color: colors.accent.cyan, suffix: "%" },
     marginal:     { key: "marginalVaR",  label: "Marginal VaR ($)",      color: colors.accent.blue, suffix: "" },
-    beta:         { key: "beta",         label: "Beta",                   color: colors.semantic.yellow, suffix: "" },
   };
 
   const cfg = viewConfig[view];
@@ -132,7 +128,7 @@ export const RiskBreakdownChart: React.FC<Props> = ({ breakdown, isLoading }) =>
 
       <div className="rbc__footer">
         Total Portfolio VaR: <strong style={{ color: colors.accent.cyan, fontFamily: "'DM Mono',monospace" }}>
-          ${breakdown.totalVaR.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+          ${breakdown.total_var.toLocaleString("en-US", { maximumFractionDigits: 2 })}
         </strong>
       </div>
 

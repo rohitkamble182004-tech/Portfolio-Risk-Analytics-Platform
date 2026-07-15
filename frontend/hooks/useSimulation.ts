@@ -1,7 +1,7 @@
 // frontend/hooks/useSimulation.ts
 
 import { useState, useCallback, useRef } from "react";
-import { simulationApi, SimulationResult, RunSimulationRequest } from "../services/simulationApi";
+import { simulationApi, SimulationResult, SimulationRequest } from "../services/simulationApi";
 
 interface Position {
   symbol: string;
@@ -60,7 +60,7 @@ export function useSimulation(portfolioId: string | null) {
           }
         }
 
-        const request: RunSimulationRequest = {
+        const request: SimulationRequest = {
           tickers: positions.map((p) => p.symbol),
           weights: positions.map((p) => p.weight),
           portfolio_value: calculatedValue,

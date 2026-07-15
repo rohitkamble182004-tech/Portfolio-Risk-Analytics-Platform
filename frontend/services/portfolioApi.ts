@@ -1,113 +1,122 @@
+// frontend/services/portfolioApi.ts
+
 import { apiClient } from "./apiClient";
 import type {
   Portfolio,
   PortfolioSummary,
   CreatePortfolioRequest,
   AddHoldingRequest,
-  Holding,
 } from "../types/portfolio";
 
-/* ─── Endpoint constants ─────────────────────────────────────────────────── */
 const BASE = "/portfolios";
+
+/* ─── Request / Response types ──────────────────────────────────────────── */
+export interface UpdatePortfolioRequest {
+  name?: string;
+  description?: string;
+  currency?: string;
+  benchmark?: string;
+}
+
+export interface HoldingUpdateRequest {
+  quantity?: number;
+  avgCost?: number;
+  assetClass?: string;
+}
 
 /* ─── Portfolio API ──────────────────────────────────────────────────────── */
 export const portfolioApi = {
   /**
-   * List all portfolios (summary level — no full holdings).
+   * List all portfolios (summary view)
    */
   list(): Promise<PortfolioSummary[]> {
     return apiClient.get<PortfolioSummary[]>(BASE);
   },
 
   /**
-   * Get a single portfolio with all holdings and computed values.
+   * Get a single portfolio with full holdings
    */
-  get(portfolioId: string): Promise<Portfolio> {
-    return apiClient.get<Portfolio>(`${BASE}/${portfolioId}`);
+  get(id: string): Promise<Portfolio> {
+    return apiClient.get<Portfolio>(`${BASE}/${id}`);
   },
 
   /**
-   * Create a new empty portfolio.
+   * Create a new portfolio
    */
-  create(payload: CreatePortfolioRequest): Promise<Portfolio> {
-    return apiClient.post<Portfolio>(BASE, payload);
+  create(data: CreatePortfolioRequest): Promise<Portfolio> {
+    return apiClient.post<Portfolio>(BASE, data);
   },
 
   /**
-   * Update portfolio metadata (name, description, benchmark, currency).
+   * Full update (PUT) – replaces metadata AND holdings
    */
-  update(
-    portfolioId: string,
-    payload: Partial<Pick<Portfolio, "name" | "description" | "benchmark" | "currency">>,
-  ): Promise<Portfolio> {
-    return apiClient.patch<Portfolio>(`${BASE}/${portfolioId}`, payload);
+  update(id: string, data: UpdatePortfolioRequest): Promise<Portfolio> {
+    return apiClient.put<Portfolio>(`${BASE}/${id}`, data);
   },
 
   /**
-   * Delete a portfolio and all its holdings.
+   * Partial update (PATCH) – only touches fields that are present
    */
-  delete(portfolioId: string): Promise<void> {
-    return apiClient.delete(`${BASE}/${portfolioId}`);
+  patch(id: string, data: UpdatePortfolioRequest): Promise<Portfolio> {
+    return apiClient.patch<Portfolio>(`${BASE}/${id}`, data);
   },
 
   /**
-   * Add a holding to an existing portfolio.
+   * Delete a portfolio
    */
-  addHolding(portfolioId: string, payload: AddHoldingRequest): Promise<Portfolio> {
-    return apiClient.post<Portfolio>(`${BASE}/${portfolioId}/holdings`, payload);
+  delete(id: string): Promise<void> {
+    return apiClient.delete<void>(`${BASE}/${id}`);
   },
 
   /**
-   * Update an existing holding (quantity, avg cost, etc.).
+   * Add a holding to a portfolio
+   */
+  addHolding(portfolioId: string, holding: AddHoldingRequest): Promise<Portfolio> {
+    return apiClient.post<Portfolio>(`${BASE}/${portfolioId}/holdings`, holding);
+  },
+
+  /**
+   * Update a holding
    */
   updateHolding(
     portfolioId: string,
     holdingId: string,
-    payload: Partial<Pick<Holding, "quantity" | "avg_Cost" | "asset_Class">>,
+    data: HoldingUpdateRequest,
   ): Promise<Portfolio> {
     return apiClient.patch<Portfolio>(
       `${BASE}/${portfolioId}/holdings/${holdingId}`,
-      payload,
+      data,
     );
   },
 
   /**
-   * Remove a single holding from a portfolio.
+   * Remove a holding
    */
   removeHolding(portfolioId: string, holdingId: string): Promise<Portfolio> {
-    return apiClient.delete<Portfolio>(
-      `${BASE}/${portfolioId}/holdings/${holdingId}`,
-    );
+    return apiClient.delete<Portfolio>(`${BASE}/${portfolioId}/holdings/${holdingId}`);
   },
 
   /**
-   * Trigger a market-data refresh for all holdings in a portfolio.
-   * Returns the updated portfolio with fresh currentPrice values.
+   * Refresh prices for all holdings in a portfolio
    */
   refreshPrices(portfolioId: string): Promise<Portfolio> {
-    return apiClient.post<Portfolio>(`${BASE}/${portfolioId}/refresh-prices`);
-  },
-
-  /**
-   * Get a snapshot of historical performance data for charting.
-   * Returns daily NAV timeseries.
-   */
-  getPerformance(
-    portfolioId: string,
-    params?: { startDate?: string; endDate?: string; benchmark?: string },
-  ): Promise<{ date: string; nav: number; benchmark?: number }[]> {
-    return apiClient.get(`${BASE}/${portfolioId}/performance`, params as any);
+    return apiClient.post<Portfolio>(`${BASE}/${portfolioId}/refresh`);
   },
 
   /**
    * Export portfolio as CSV.
+   * Returns a Blob that can be downloaded.
    */
   exportCsv(portfolioId: string): Promise<Blob> {
-    return apiClient.instance
+    // Use the raw axios instance to handle blob response
+    const instance = apiClient.getInstance();
+    return instance
       .get(`${BASE}/${portfolioId}/export`, {
         responseType: "blob",
         headers: { Accept: "text/csv" },
       })
-      .then((r) => r.data);
+      .then((response: { data: Blob }) => response.data);
   },
 };
+
+export default portfolioApi;

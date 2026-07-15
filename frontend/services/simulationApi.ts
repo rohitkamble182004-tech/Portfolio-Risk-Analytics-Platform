@@ -1,47 +1,15 @@
 // frontend/api/simulationApi.ts
 
 import { apiClient } from "../services/apiClient";
+import type {
+  SimulationResult,
+  SimulationRequest,
+  SimulationDefaults,
+} from "../types/simulation";
 
 /* ─── Request / Response shapes ─────────────────────────────────────────── */
-export interface RunSimulationRequest {
-  tickers: string[];
-  weights: number[];
-  portfolio_value: number;
-  num_simulations: number;
-  time_horizon: number;
-  confidence_level: number;
-  random_seed?: number;
-}
-
-// Backend returns camelCase for responses
-export interface PercentileResult {
-  p5: number;
-  p10: number;
-  p25: number;
-  p50: number;
-  p75: number;
-  p90: number;
-  p95: number;
-}
-
-export interface SimulationResult {
-  numSimulations: number;
-  timeHorizon: number;
-  initialValue: number;
-  finalValues: PercentileResult;
-  varDollar: number;
-  cvarDollar: number;
-  probabilityOfLoss: number;
-  expectedFinalValue: number;
-  pathsSample: number[][] | null;
-}
-
-export interface DefaultParams {
-  num_simulations: number;
-  max_simulations: number;
-  time_horizon: number;
-  confidence_level: number;
-}
+// Re-export for convenience
+export type { SimulationResult, SimulationRequest, SimulationDefaults };
 
 /* ─── Simulation API ─────────────────────────────────────────────────────── */
 export const simulationApi = {
@@ -49,7 +17,7 @@ export const simulationApi = {
    * Run a Monte Carlo simulation synchronously.
    * Returns results directly (no async job/polling).
    */
-  run(req: RunSimulationRequest): Promise<SimulationResult> {
+  run(req: SimulationRequest): Promise<SimulationResult> {
     return apiClient.post<SimulationResult>("/simulation/run", {
       tickers: req.tickers,
       weights: req.weights,
@@ -64,7 +32,7 @@ export const simulationApi = {
   /**
    * Get server-side default simulation parameters.
    */
-  getDefaults(): Promise<DefaultParams> {
-    return apiClient.get<DefaultParams>("/simulation/defaults");
+  getDefaults(): Promise<SimulationDefaults> {
+    return apiClient.get<SimulationDefaults>("/simulation/defaults");
   },
 };
