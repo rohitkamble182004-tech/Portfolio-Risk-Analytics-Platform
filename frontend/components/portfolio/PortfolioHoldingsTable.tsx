@@ -38,12 +38,14 @@ export const PortfolioHoldingsTable: React.FC<Props> = ({
   const [filter, setFilter] = useState("");
 
   const sorted = useMemo(() => {
-    const filtered = holdings.filter(
-      (h) =>
-        h.ticker.toLowerCase().includes(filter.toLowerCase()) ||
-        h.name.toLowerCase().includes(filter.toLowerCase()) ||
-        h.sector.toLowerCase().includes(filter.toLowerCase())
-    );
+    const search = filter.toLowerCase();
+
+const filtered = holdings.filter(
+  (h) =>
+    h.ticker.toLowerCase().includes(search) ||
+    h.name.toLowerCase().includes(search) ||
+    (h.sector ?? "").toLowerCase().includes(search)
+);
     return [...filtered].sort((a, b) => {
       const av = a[sortKey] as number | string;
       const bv = b[sortKey] as number | string;
@@ -71,10 +73,10 @@ export const PortfolioHoldingsTable: React.FC<Props> = ({
   const cols: { key: SortKey; label: string; align?: "right" }[] = [
     { key: "ticker",      label: "Ticker" },
     { key: "name",        label: "Name" },
-    { key: "assetClass",  label: "Class" },
+    { key: "asset_Class",  label: "Class" },
     { key: "sector",      label: "Sector" },
     { key: "quantity",    label: "Qty",         align: "right" },
-    { key: "avgCost",     label: "Avg Cost",    align: "right" },
+    { key: "avg_Cost",     label: "Avg Cost",    align: "right" },
     { key: "currentPrice",label: "Price",       align: "right" },
     { key: "marketValue", label: "Mkt Value",   align: "right" },
     { key: "weight",      label: "Weight",      align: "right" },
@@ -147,16 +149,16 @@ export const PortfolioHoldingsTable: React.FC<Props> = ({
                     <span
                       className="badge"
                       style={{
-                        background: `${ASSET_CLASS_COLORS[h.assetClass]}18`,
-                        color: ASSET_CLASS_COLORS[h.assetClass],
+                        background: `${ASSET_CLASS_COLORS[h.asset_Class]}18`,
+                        color: ASSET_CLASS_COLORS[h.asset_Class],
                       }}
                     >
-                      {h.assetClass}
+                      {h.asset_Class}
                     </span>
                   </td>
                   <td style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{h.sector}</td>
                   <td className="num">{h.quantity.toLocaleString()}</td>
-                  <td className="num">{fmtCurrency(h.avgCost)}</td>
+                  <td className="num">{fmtCurrency(h.avg_Cost)}</td>
                   <td className="num">{fmtCurrency(h.currentPrice)}</td>
                   <td className="num" style={{ fontWeight: 500 }}>{fmtCurrency(h.marketValue)}</td>
                   <td className="num">

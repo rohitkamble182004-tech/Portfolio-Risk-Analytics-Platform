@@ -96,8 +96,8 @@ export const PortfolioSummaryCard: React.FC<Props> = ({
 
       <div className="psc__meta">
         <span>Currency: <strong>{portfolio.currency}</strong></span>
-        {portfolio.benchmarkTicker && (
-          <span>Benchmark: <strong>{portfolio.benchmarkTicker}</strong></span>
+        {portfolio.benchmark && (
+          <span>Benchmark: <strong>{portfolio.benchmark}</strong></span>
         )}
         <span>Updated: <strong>{new Date(portfolio.updatedAt).toLocaleString()}</strong></span>
       </div>
