@@ -39,10 +39,11 @@ export function useRiskMetrics(portfolioId: string | null, positions: Position[]
 
     // Validate positions
     if (!Array.isArray(positions) || positions.length === 0) {
-      setError("No positions available for risk analysis");
-      setIsLoading(false);
-      return;
-    }
+  setMetrics(null);
+  setError(null);
+  setIsLoading(false);
+  return;
+}
 
     // Filter out positions with invalid market values
     const validPositions = positions.filter(
@@ -57,10 +58,11 @@ export function useRiskMetrics(portfolioId: string | null, positions: Position[]
     );
 
     if (validPositions.length === 0) {
-      setError("No valid positions with positive market value");
-      setIsLoading(false);
-      return;
-    }
+  setMetrics(null);
+  setError(null);
+  setIsLoading(false);
+  return;
+}
 
     // Aggregate positions by ticker to handle duplicates
     const aggregatedPositions = new Map<string, { symbol: string; marketValue: number }>();
@@ -87,10 +89,11 @@ export function useRiskMetrics(portfolioId: string | null, positions: Position[]
     );
 
     if (totalValue <= 0) {
-      setError("Total portfolio value is zero or negative");
-      setIsLoading(false);
-      return;
-    }
+    setMetrics(null);
+    setError(null);
+    setIsLoading(false);
+    return;
+}
 
     // Extract tickers and weights
     const tickers = uniquePositions.map((p) => p.symbol);

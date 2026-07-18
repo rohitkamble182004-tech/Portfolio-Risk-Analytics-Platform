@@ -6,7 +6,9 @@ httpx==0.27.0
 numpy==1.26.4
 pandas==2.2.2
 scipy==1.13.0
-yfinance==0.2.40
+yfinance==0.2.65
+curl_cffi>=0.7.0
+requests>=2.32.0
 redis==5.0.4
 hiredis==2.3.2
 sqlalchemy==2.0.30
